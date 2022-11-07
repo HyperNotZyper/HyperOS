@@ -79,24 +79,32 @@ def flash_kernel(kernel_part: str) -> None:
 
 
 # Make a bootable rootfs
-def bootstrap_rootfs(root_partuuid) -> None:
-    bash("dnf -y --releasever=36 --installroot=/mnt/eupnea groupinstall core")
+def config(de_name: str, distro_version: str, username: str, root_partuuid: str, verbose: bool) -> None:
+    set_verbose(verbose)
+    print_status("Configuring Ubuntu")
 
-    # Create a temporary resolv.conf for internet inside the chroot
-    mkdir("/mnt/eupnea/run/systemd/resolve", create_parents=True)  # dir doesnt exist coz systemd didnt run
-    cpfile("/etc/resolv.conf", "/mnt/eupnea/run/systemd/resolve/stub-resolv.conf")  # copy hosts resolv.conf to chroot
+    ubuntu_versions_codenames = {
+        "18.04": "bionic",
+        "20.04": "focal",
+        "21.04": "hirsute",
+        "22.04": "jammy",
+        "22.10": "kinetic"
+    }
+    # add missing apt sources
+    with open("/mnt/depthboot/etc/apt/sources.list", "a") as file:
+        file.write(f"\ndeb http://archive.ubuntu.com/ubuntu {kinetic[22.10]}-backports main "
+                   "restricted universe multiverse\n")
+        file.write(f"\ndeb http://security.ubuntu.com/ubuntu {kinetic[22.10]}-security main"
+                   f" restricted universe multiverse\n")
+        file.write(f"\ndeb http://archive.ubuntu.com/ubuntu {kinetic[22.10]}-updates main "
+                   f"restricted universe multiverse\n")
 
-    # TODO: Replace generic repos with own eupnea repos
-    chroot("dnf install --releasever=36 --allowerasing -y generic-logos generic-release generic-release-common")
-    chroot("dnf group install -y 'Common NetworkManager Submodules'")
-    chroot("dnf group install -y 'Hardware Support'")
-    chroot("dnf install -y linux-firmware")
-
-    # Add RPMFusion repos
-    chroot(f"dnf install -y https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-36.noarch.rpm")
-    chroot(f"dnf install -y https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-36.noarch.rpm")
-
-
+        print_status("Installing dependencies")
+    chroot("apt-get update -y")
+    chroot("apt-get install -y linux-firmware network-manager software-properties-common")
+    chroot("apt-get install -y git cgpt vboot-kernel-utils cloud-utils rsync")  # postinstall dependencies
+    
+    
 def configure_rootfs() -> None:
     # Extract kernel modules
     print_status("Extracting kernel modules")
@@ -126,7 +134,7 @@ def configure_rootfs() -> None:
 
     # Set device hostname
     with open("/mnt/eupnea/etc/hostname", "w") as hostname_file:
-        hostname_file.write("eupnea-chromebook" + "\n")
+        hostname_file.write("hyperbook" + "\n")
 
     print_status("Configuring liveuser")
     chroot("useradd --create-home --shell /bin/bash liveuser")  # add user
