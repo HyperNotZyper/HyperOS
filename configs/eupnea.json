@@ -1,8 +1,0 @@
-{
-  "kernel_type": "stable",
-  "kernel_version": "none",
-  "eupnea_version": "alpha",
-  "install_type": "image",
-  "distro_name": "eupnea",
-  "de_name": "chromeos-kde"
-}
