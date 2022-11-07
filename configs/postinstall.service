@@ -1,0 +1,11 @@
+[Unit]
+Description=Postinstall service, autodeletes itself if run successfully on first boot
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/postinstall
+RemainAfterExit=false
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
