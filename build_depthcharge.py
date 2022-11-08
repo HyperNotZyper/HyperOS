@@ -72,7 +72,7 @@ def flash_kernel(kernel_part: str) -> None:
     # Sign kernel
     bash("futility vbutil_kernel --arch x86_64 --version 1 --keyblock /usr/share/vboot/devkeys/kernel.keyblock"
          + " --signprivate /usr/share/vboot/devkeys/kernel_data_key.vbprivk --bootloader kernel.flags" +
-         " --config kernel.flags --vmlinuz /tmp/hyper-build/bzImage --pack /tmp/hyperos/bzImage.signed")
+         " --config kernel.flags --vmlinuz /tmp/hyperos/bzImage --pack /tmp/hyperos/bzImage.signed")
     bash(f"dd if=/tmp/hyperos/bzImage.signed of={kernel_part}")  # part 1 is the kernel partition
 
     print_status("Kernel flashed successfully")
