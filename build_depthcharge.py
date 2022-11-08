@@ -103,7 +103,12 @@ def config(de_name: str, distro_version: str, username: str, root_partuuid: str,
     chroot("apt-get update -y")
     chroot("apt-get install -y linux-firmware network-manager software-properties-common")
     chroot("apt-get install -y git cgpt vboot-kernel-utils cloud-utils rsync")  # postinstall dependencies
-    
+    chroot("add-apt-repository -y ppa:ubuntudde-dev/stable")       
+    chroot("apt-get update -y")
+    chroot("apt-get install -y ubuntudde-dde")
+    chroot("apt-get remove -y xserver-xorg-input-synaptics")
+    chroot("apt-get install -y xserver-xorg-input-libinput")
+    chroot("apt-get install -y Firefox")
     
 def configure_rootfs() -> None:
     # Extract kernel modules
@@ -136,13 +141,10 @@ def configure_rootfs() -> None:
     with open("/mnt/eupnea/etc/hostname", "w") as hostname_file:
         hostname_file.write("hyperbook" + "\n")
 
-    print_status("Configuring liveuser")
-    chroot("useradd --create-home --shell /bin/bash liveuser")  # add user
-    chroot("usermod -aG wheel liveuser")  # add user to wheel
-    chroot(f'echo "liveuser:" | chpasswd')  # set password to blank
-    # set up automatic login on boot for temp-user
-    with open("/mnt/eupnea/etc/sddm.conf", "a") as sddm_conf:
-        sddm_conf.write("\n[Autologin]\nUser=liveuser\nSession=plasma.desktop\n")
+    print_status("Adding User")
+    chroot(f"useradd --create-home --shell /bin/bash HyperOSuser")
+    chroot(f'echo "HyperOSuser:root" | chpasswd')
+    chroot(f"usermod -aG sudo HyperOSuser:")
 
     print_status("Copying eupnea scripts and configs")
     # Copy postinstall scripts
@@ -215,14 +217,6 @@ def customize_kde() -> None:
     cpfile("configs/kde-configs/kcminputrc", "/mnt/eupnea/home/liveuser/.config/kcminputrc")  # set touchpad settings
     chroot("chown -R liveuser:liveuser /home/liveuser/.config")  # set permissions
 
-    print_status("Installing global kde theme")
-    # Installer needs to be run from within chroot
-    cpdir("eupnea-theme", "/mnt/eupnea/tmp/eupnea-theme")
-    # run installer script from chroot
-    chroot("cd /tmp/eupnea-theme && python3 /tmp/eupnea-theme/install.py")  # install global theme
-    chroot("bash /tmp/eupnea-theme/sddm/install.sh")  # install login theme
-    rmdir("/mnt/eupnea/tmp/eupnea-theme")  # remove theme repo, to reduce image size
-
 
 def compress_image(img_mnt: str) -> None:
     print_status("Shrinking image")
@@ -236,9 +230,6 @@ def compress_image(img_mnt: str) -> None:
     actual_fs_in_bytes += 67108864
     actual_fs_in_bytes += 102400  # add 100kb for linux to be able to boot
     bash(f"truncate --size={actual_fs_in_bytes} ./eupnea-depthcharge.bin")
-
-    # compress image to tar. Tars are smaller but the native file manager on chromeos cant uncompress them
-    bash("tar -cv -I 'xz -9 -T0' -f ./eupnea-depthcharge.bin.tar.xz ./eupnea-depthcharge.bin")
 
     # Rars are bigger but natively supported by the ChromeOS file manager
     bash("rar a eupnea-depthcharge.bin.rar -m5 eupnea-depthcharge.bin")
@@ -287,10 +278,6 @@ if __name__ == "__main__":
         print_warning("Verbosity increased")
         set_verbose(True)  # set verbose in functions.py
 
-    # Check that required packages are installed and yum repos are present
-    if not path_exists("/usr/bin/dnf") and not path_exists("/etc/yum.repos.d/"):
-        print_error("Install dnf and add yum repos!")
-        exit(1)
 
     # prepare mount
     mkdir("/mnt/eupnea", create_parents=True)
