@@ -103,9 +103,6 @@ def config(de_name: str, distro_version: str, username: str, root_partuuid: str,
     chroot("apt-get update -y")
     chroot("apt-get install -y linux-firmware network-manager software-properties-common")
     chroot("apt-get install -y git cgpt vboot-kernel-utils cloud-utils rsync")  # postinstall dependencies
-    chroot("add-apt-repository -y ppa:ubuntudde-dev/stable")       
-    chroot("apt-get update -y")
-    chroot("apt-get install -y ubuntudde-dde")
     chroot("apt-get remove -y xserver-xorg-input-synaptics")
     chroot("apt-get install -y xserver-xorg-input-libinput")
     chroot("apt-get install -y Firefox")
@@ -202,7 +199,7 @@ def configure_rootfs() -> None:
 
 def customize_kde() -> None:
     # Install KDE
-    chroot("dnf group install -y 'KDE Plasma Workspaces'")
+    chroot("DEBIAN_FRONTEND=noninteractive apt-get install -y kde-standard")
     # Set system to boot to gui
     chroot("systemctl set-default graphical.target")
     # Add chromebook keyboard layout. Needs to be done after install Xorg
