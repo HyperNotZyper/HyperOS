@@ -81,20 +81,12 @@ def flash_kernel(kernel_part: str) -> None:
 # Make a bootable rootfs
 def bootstrap_rootfs(root_partuuid) -> None:
 
-    ubuntu_versions_codenames = {
-        "18.04": "bionic",
-        "20.04": "focal",
-        "21.04": "hirsute",
-        "22.04": "jammy",
-        "22.10": "kinetic"
-    }
-    # add missing apt sources
-    with open("/mnt/depthboot/etc/apt/sources.list", "a") as file:
-        file.write(f"\ndeb http://archive.ubuntu.com/ubuntu {kinetic[22.10]}-backports main "
+    with open("/mnt/hyperos/etc/apt/sources.list", "a") as file:
+        file.write(f"\ndeb http://archive.ubuntu.com/ubuntu kinetic 22.10-backports main "
                    "restricted universe multiverse\n")
-        file.write(f"\ndeb http://security.ubuntu.com/ubuntu {kinetic[22.10]}-security main"
+        file.write(f"\ndeb http://security.ubuntu.com/ubuntu kinetic 22.10-security main"
                    f" restricted universe multiverse\n")
-        file.write(f"\ndeb http://archive.ubuntu.com/ubuntu {kinetic[22.10]}-updates main "
+        file.write(f"\ndeb http://archive.ubuntu.com/ubuntu kinetic 22.10-updates main "
                    f"restricted universe multiverse\n")
 
         print_status("Installing dependencies")
@@ -114,7 +106,7 @@ def configure_rootfs() -> None:
     print("")  # break line after tar
 
     # Enable loading modules needed for hyperos
-    cpfile("configs/eupnea-modules.conf", "/mnt/hyperos/etc/modules-load.d/hyperos-modules.conf")
+    cpfile("configs/eupnea-modules.conf", "/mnt/hyperos/etc/modules-load.d/eupnea-modules.conf")
 
     # Extract kernel headers
     print_status("Extracting kernel headers")
@@ -154,7 +146,7 @@ def configure_rootfs() -> None:
     cpfile("audio-scripts/setup-audio", "/mnt/hyperos/usr/local/bin/setup-audio")
 
     # copy functions file
-    cpfile("functions.py", "/mnt/eupnea/usr/local/bin/functions.py")
+    cpfile("functions.py", "/mnt/hyperos/usr/local/bin/functions.py")
     chroot("chmod 755 /usr/local/bin/*")  # make scripts executable in system
 
     # copy configs
@@ -164,7 +156,7 @@ def configure_rootfs() -> None:
     cpdir("audio-scripts/configs", "/mnt/hyperos/etc/hyperos")  # audio configs
 
     # copy preset eupnea settings file for postinstall scripts to read
-    cpfile("configs/hyperos.json", "/mnt/hyperos/etc/hyperos.json")
+    cpfile("configs/eupnea.json", "/mnt/hyperos/etc/eupnea.json")
 
     # Add postinstall service hook
     print_status("Adding postinstall service")
@@ -210,7 +202,7 @@ def customize_kde() -> None:
     mkdir("/mnt/hyperos/home/liveuser/.config")
     cpfile("configs/kde-configs/kwinrc", "/mnt/hyperos/home/liveuser/.config/kwinrc")  # set general kwin settings
     cpfile("configs/kde-configs/kcminputrc", "/mnt/hyperos/home/liveuser/.config/kcminputrc")  # set touchpad settings
-    chroot("chown -R liveuser:liveuser /home/liveuser/.config")  # set permissions
+    chroot("chown -R HyperOSuser:HyperOSuser /home/HyperOSuser/.config")  # set permissions
 
 
 def compress_image(img_mnt: str) -> None:
