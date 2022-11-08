@@ -79,9 +79,7 @@ def flash_kernel(kernel_part: str) -> None:
 
 
 # Make a bootable rootfs
-def config(de_name: str, distro_version: str, username: str, root_partuuid: str, verbose: bool) -> None:
-    set_verbose(verbose)
-    print_status("Configuring Ubuntu")
+def bootstrap_rootfs(root_partuuid) -> None:
 
     ubuntu_versions_codenames = {
         "18.04": "bionic",
