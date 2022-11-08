@@ -85,14 +85,6 @@ def bootstrap_rootfs(root_partuuid) -> None:
     # Create a temporary resolv.conf for internet inside the chroot
     mkdir("/mnt/hyperos/run/systemd/resolve", create_parents=True) # dir doesnt exist coz systemd didnt run
     cpfile("/etc/resolv.conf", "/mnt/hyperos/run/systemd/resolve/stub-resolv.conf") # copy hosts resolv.conf to chroot
-    
-    with open("/mnt/hyperos/etc/apt/sources.list", "a") as file:
-        file.write(f"\ndeb http://archive.ubuntu.com/ubuntu kinetic 22.10-backports main "
-                   "restricted universe multiverse\n")
-        file.write(f"\ndeb http://security.ubuntu.com/ubuntu kinetic 22.10-security main"
-                   f" restricted universe multiverse\n")
-        file.write(f"\ndeb http://archive.ubuntu.com/ubuntu kinetic 22.10-updates main "
-                   f"restricted universe multiverse\n")
 
     chroot("apt-get update -y")
     chroot("apt-get install -y git cgpt vboot-kernel-utils cloud-utils rsync")  # postinstall dependencies
