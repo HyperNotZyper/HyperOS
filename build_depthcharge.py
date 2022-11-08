@@ -25,13 +25,13 @@ def process_args():
     return parser.parse_args()
 
 
-# Create, mount, partition the img and flash the eupnea kernel
+# Create, mount, partition the img and flash the eupnea's kernel
 def prepare_image() -> Tuple[str, str]:
     print_status("Preparing image")
 
-    bash(f"fallocate -l 8G eupnea-depthcharge.bin")
+    bash(f"fallocate -l 8G HyperOS.bin")
     print_status("Mounting empty image")
-    img_mnt = bash("losetup -f --show eupnea-depthcharge.bin")
+    img_mnt = bash("losetup -f --show HyperOS.bin")
     if img_mnt == "":
         print_error("Failed to mount image")
         exit(1)
@@ -51,7 +51,7 @@ def prepare_image() -> Tuple[str, str]:
     # Create rootfs ext4 partition
     bash(f"yes 2>/dev/null | mkfs.ext4 {rootfs_mnt}")  # 2>/dev/null is to supress yes broken pipe warning
     # Mount rootfs partition
-    bash(f"mount {rootfs_mnt} /mnt/eupnea")
+    bash(f"mount {rootfs_mnt} /mnt/hyperos")
 
     # get uuid of rootfs partition
     rootfs_partuuid = bash(f"blkid -o value -s PARTUUID {rootfs_mnt}")
@@ -72,8 +72,8 @@ def flash_kernel(kernel_part: str) -> None:
     # Sign kernel
     bash("futility vbutil_kernel --arch x86_64 --version 1 --keyblock /usr/share/vboot/devkeys/kernel.keyblock"
          + " --signprivate /usr/share/vboot/devkeys/kernel_data_key.vbprivk --bootloader kernel.flags" +
-         " --config kernel.flags --vmlinuz /tmp/eupnea-build/bzImage --pack /tmp/eupnea-build/bzImage.signed")
-    bash(f"dd if=/tmp/eupnea-build/bzImage.signed of={kernel_part}")  # part 1 is the kernel partition
+         " --config kernel.flags --vmlinuz /tmp/hyper-build/bzImage --pack /tmp/hyperos/bzImage.signed")
+    bash(f"dd if=/tmp/hyperos/bzImage.signed of={kernel_part}")  # part 1 is the kernel partition
 
     print_status("Kernel flashed successfully")
 
@@ -113,20 +113,20 @@ def config(de_name: str, distro_version: str, username: str, root_partuuid: str,
 def configure_rootfs() -> None:
     # Extract kernel modules
     print_status("Extracting kernel modules")
-    rmdir("/mnt/eupnea/lib/modules")  # remove all old modules
-    mkdir("/mnt/eupnea/lib/modules")
-    bash(f"tar xpf /tmp/eupnea-build/modules.tar.xz -C /mnt/eupnea/lib/modules/ --checkpoint=.10000")
+    rmdir("/mnt/hyperos/lib/modules")  # remove all old modules
+    mkdir("/mnt/hyperos/lib/modules")
+    bash(f"tar xpf /tmp/hyperos/modules.tar.xz -C /mnt/hyperos/lib/modules/ --checkpoint=.10000")
     print("")  # break line after tar
 
-    # Enable loading modules needed for eupnea
-    cpfile("configs/eupnea-modules.conf", "/mnt/eupnea/etc/modules-load.d/eupnea-modules.conf")
+    # Enable loading modules needed for hyperos
+    cpfile("configs/eupnea-modules.conf", "/mnt/hyperos/etc/modules-load.d/hyperos-modules.conf")
 
     # Extract kernel headers
     print_status("Extracting kernel headers")
-    dir_kernel_version = bash(f"ls /mnt/eupnea/lib/modules/").strip()  # get modules dir name
-    rmdir(f"/mnt/eupnea/usr/src/linux-headers-{dir_kernel_version}", keep_dir=False)  # remove old headers
-    mkdir(f"/mnt/eupnea/usr/src/linux-headers-{dir_kernel_version}", create_parents=True)
-    bash(f"tar xpf /tmp/eupnea-build/headers.tar.xz -C /mnt/eupnea/usr/src/linux-headers-{dir_kernel_version}/ "
+    dir_kernel_version = bash(f"ls /mnt/hyperos/lib/modules/").strip()  # get modules dir name
+    rmdir(f"/mnt/hyperos/usr/src/linux-headers-{dir_kernel_version}", keep_dir=False)  # remove old headers
+    mkdir(f"/mnt/hyperos/usr/src/linux-headers-{dir_kernel_version}", create_parents=True)
+    bash(f"tar xpf /tmp/hyperos-build/headers.tar.xz -C /mnt/hyperos/usr/src/linux-headers-{dir_kernel_version}/ "
          f"--checkpoint=.10000")
     print("")  # break line after tar
     chroot(f"ln -s /usr/src/linux-headers-{dir_kernel_version}/ "
@@ -134,11 +134,11 @@ def configure_rootfs() -> None:
 
     # Copy chromebook firmware
     print_status("Copying google firmware")
-    rmdir("/mnt/eupnea/lib/firmware")
-    cpdir("linux-firmware", "/mnt/eupnea/lib/firmware")
+    rmdir("/mnt/hyperos/lib/firmware")
+    cpdir("linux-firmware", "/mnt/hyperos/lib/firmware")
 
     # Set device hostname
-    with open("/mnt/eupnea/etc/hostname", "w") as hostname_file:
+    with open("/mnt/hyperos/etc/hostname", "w") as hostname_file:
         hostname_file.write("hyperbook" + "\n")
 
     print_status("Adding User")
@@ -153,41 +153,41 @@ def configure_rootfs() -> None:
             if file.name == "LICENSE" or file.name == "README.md" or file.name == ".gitignore":
                 continue  # dont copy license, readme and gitignore
             else:
-                cpfile(file.absolute().as_posix(), f"/mnt/eupnea/usr/local/bin/{file.name}")
+                cpfile(file.absolute().as_posix(), f"/mnt/hyperos/usr/local/bin/{file.name}")
 
     # copy audio setup script
-    cpfile("audio-scripts/setup-audio", "/mnt/eupnea/usr/local/bin/setup-audio")
+    cpfile("audio-scripts/setup-audio", "/mnt/hyperos/usr/local/bin/setup-audio")
 
     # copy functions file
     cpfile("functions.py", "/mnt/eupnea/usr/local/bin/functions.py")
     chroot("chmod 755 /usr/local/bin/*")  # make scripts executable in system
 
     # copy configs
-    mkdir("/mnt/eupnea/etc/eupnea")
-    cpdir("configs", "/mnt/eupnea/etc/eupnea")  # eupnea-builder configs
-    cpdir("postinstall-scripts/configs", "/mnt/eupnea/etc/eupnea")  # postinstall configs
-    cpdir("audio-scripts/configs", "/mnt/eupnea/etc/eupnea")  # audio configs
+    mkdir("/mnt/hyperos/etc/hyperos")
+    cpdir("configs", "/mnt/hyperos/etc/hyperos")  # eupnea-builder configs
+    cpdir("postinstall-scripts/configs", "/mnt/hyperos/etc/hyperos")  # postinstall configs
+    cpdir("audio-scripts/configs", "/mnt/hyperos/etc/hyperos")  # audio configs
 
     # copy preset eupnea settings file for postinstall scripts to read
-    cpfile("configs/eupnea.json", "/mnt/eupnea/etc/eupnea.json")
+    cpfile("configs/hyperos.json", "/mnt/hyperos/etc/hyperos.json")
 
     # Add postinstall service hook
     print_status("Adding postinstall service")
-    cpfile("configs/postinstall.service", "/mnt/eupnea/etc/systemd/system/postinstall.service")
+    cpfile("configs/postinstall.service", "/mnt/hyperos/etc/systemd/system/postinstall.service")
     chroot("systemctl enable postinstall.service")
 
     print_status("Fixing sleep")
     # disable hibernation aka S4 sleep, READ: https://eupnea-linux.github.io/docs.html#/pages/bootlock
     # TODO: Fix S4 sleep
-    mkdir("/mnt/eupnea/etc/systemd/")  # just in case systemd path doesn't exist
-    with open("/mnt/eupnea/etc/systemd/sleep.conf", "a") as conf:
+    mkdir("/mnt/hyperos/etc/systemd/")  # just in case systemd path doesn't exist
+    with open("/mnt/hyperos/etc/systemd/sleep.conf", "a") as conf:
         conf.write("SuspendState=freeze\nHibernateState=freeze\n")
 
     # TODO: Fix failing services
     # The services below fail to start, so they are disabled
     # ssh
-    rmfile("/mnt/eupnea/etc/systemd/system/multi-user.target.wants/ssh.service")
-    rmfile("/mnt/eupnea/etc/systemd/system/sshd.service")
+    rmfile("/mnt/hyperos/etc/systemd/system/multi-user.target.wants/ssh.service")
+    rmfile("/mnt/hyperos/etc/systemd/system/sshd.service")
     # TODO: Fix zram
     chroot("dnf remove zram-generator-defaults -y")  # remove zram as it fails for some reason
     chroot("systemctl disable systemd-zram-setup@zram0.service")  # disable zram service
@@ -207,14 +207,14 @@ def customize_kde() -> None:
     chroot("systemctl set-default graphical.target")
     # Add chromebook keyboard layout. Needs to be done after install Xorg
     print_status("Backing up default keymap and setting Chromebook layout")
-    cpfile("/mnt/eupnea/usr/share/X11/xkb/symbols/pc", "/mnt/eupnea/usr/share/X11/xkb/symbols/pc.default")
-    cpfile("configs/xkb/xkb.chromebook", "/mnt/eupnea/usr/share/X11/xkb/symbols/pc")
+    cpfile("/mnt/hyperos/usr/share/X11/xkb/symbols/pc", "/mnt/hyperos/usr/share/X11/xkb/symbols/pc.default")
+    cpfile("configs/xkb/xkb.chromebook", "/mnt/hyperos/usr/share/X11/xkb/symbols/pc")
 
     # Set kde ui settings
     print_status("Setting General UI settings")
-    mkdir("/mnt/eupnea/home/liveuser/.config")
-    cpfile("configs/kde-configs/kwinrc", "/mnt/eupnea/home/liveuser/.config/kwinrc")  # set general kwin settings
-    cpfile("configs/kde-configs/kcminputrc", "/mnt/eupnea/home/liveuser/.config/kcminputrc")  # set touchpad settings
+    mkdir("/mnt/hyperos/home/liveuser/.config")
+    cpfile("configs/kde-configs/kwinrc", "/mnt/hyperos/home/liveuser/.config/kwinrc")  # set general kwin settings
+    cpfile("configs/kde-configs/kcminputrc", "/mnt/hyperos/home/liveuser/.config/kcminputrc")  # set touchpad settings
     chroot("chown -R liveuser:liveuser /home/liveuser/.config")  # set permissions
 
 
@@ -229,21 +229,21 @@ def compress_image(img_mnt: str) -> None:
     # the kernel part is always the same size -> sector amount: 131072 * 512 => 67108864 bytes
     actual_fs_in_bytes += 67108864
     actual_fs_in_bytes += 102400  # add 100kb for linux to be able to boot
-    bash(f"truncate --size={actual_fs_in_bytes} ./eupnea-depthcharge.bin")
+    bash(f"truncate --size={actual_fs_in_bytes} ./HyperOS.bin")
 
     # Rars are bigger but natively supported by the ChromeOS file manager
-    bash("rar a eupnea-depthcharge.bin.rar -m5 eupnea-depthcharge.bin")
+    bash("rar a HyperOS.bin.rar -m5 HyperOS.bin")
 
 
 def chroot(command: str) -> None:
     if args.verbose:
-        bash(f'chroot /mnt/eupnea /bin/sh -c "{command}"')
+        bash(f'chroot /mnt/hyperos /bin/sh -c "{command}"')
     else:
-        bash(f'chroot /mnt/eupnea /bin/sh -c "{command}" 2>/dev/null 1>/dev/null')  # supress all output
+        bash(f'chroot /mnt/hyperos /bin/sh -c "{command}" 2>/dev/null 1>/dev/null')  # supress all output
 
 
 if __name__ == "__main__":
-    if os.geteuid() == 0 and not path_exists("/tmp/.eupnea_root_ok"):
+    if os.geteuid() == 0 and not path_exists("/tmp/.hyperos_root_ok"):
         print_error("Please start the script as non-root/without sudo")
         exit(1)
 
@@ -252,13 +252,13 @@ if __name__ == "__main__":
     # Restart script as root
     if not os.geteuid() == 0:
         # create empty file to confirm script was started as non-root
-        with open("/tmp/.eupnea_root_ok", "w") as file:
+        with open("/tmp/.hyperos_root_ok", "w") as file:
             file.write("")
         sudo_args = ['sudo', sys.executable] + sys.argv + [os.environ]
         os.execlpe('sudo', *sudo_args)
 
     # delete file to confirm script was started as root
-    rmfile("/tmp/.eupnea_root_ok")
+    rmfile("/tmp/.hyperos_root_ok")
 
     # parse arguments
     dev_release = args.dev_build
@@ -280,7 +280,7 @@ if __name__ == "__main__":
 
 
     # prepare mount
-    mkdir("/mnt/eupnea", create_parents=True)
+    mkdir("/mnt/hyperos", create_parents=True)
 
     image_props = prepare_image()
     bootstrap_rootfs(image_props[0])
@@ -288,7 +288,7 @@ if __name__ == "__main__":
     customize_kde()
 
     # Unmount image to prevent tar error: "file changed as we read it"
-    bash("umount -f /mnt/eupnea")
+    bash("umount -f /mnt/hyperos")
     sleep(5)  # wait for umount to finish
     compress_image(image_props[1])
 
