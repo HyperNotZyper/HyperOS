@@ -15,14 +15,7 @@ jobs:
           fetch-depth: 1
 
       - name: Installing dependencies
-        run: sudo apt-get install -y cgpt vboot-kernel-utils curl rar
-
-      - name: Adding yum repos for dnf
-        run: sudo cp -r configs/yum.repos.d/ /etc/yum.repos.d/
-
-      - name: Adding gpg keys repos for dnf
-        run: sudo cp -r configs/rpm-gpg /etc/pki/
-
+        run: sudo apt-get install -y cgpt vboot-kernel-utils parted
       - name: Cloning repositories
         run: |
           git clone --depth=1 https://github.com/eupnea-linux/postinstall-scripts.git
@@ -31,13 +24,13 @@ jobs:
           git clone --depth=1 https://chromium.googlesource.com/chromiumos/third_party/linux-firmware
 
       - name: Create temp directory
-        run: mkdir /tmp/eupnea-build/
+        run: mkdir /tmp/hyperos/
 
       - name: Downloading kernel, modules, headers
         run: |
-          curl -L "https://github.com/eupnea-linux/kernel/releases/latest/download/bzImage" -o /tmp/eupnea-build/bzImage
-          curl -L "https://github.com/eupnea-linux/kernel/releases/latest/download/modules.tar.xz" -o /tmp/eupnea-build/modules.tar.xz
-          curl -L "https://github.com/eupnea-linux/kernel/releases/latest/download/headers.tar.xz" -o /tmp/eupnea-build/headers.tar.xz
+          curl -L "https://github.com/eupnea-linux/kernel/releases/latest/download/bzImage" -o /tmp/hyperos/bzImage
+          curl -L "https://github.com/eupnea-linux/kernel/releases/latest/download/modules.tar.xz" -o /tmp/hyperos/modules.tar.xz
+          curl -L "https://github.com/eupnea-linux/kernel/releases/latest/download/headers.tar.xz" -o /tmp/hyperos/headers.tar.xz
 
       - name: Building depthcharge image
         run: python3 build_depthcharge.py -v
@@ -70,14 +63,12 @@ jobs:
       - name: Publishing new release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.tag.outputs.release_tag }}
-          name: Image build - ${{ steps.tag.outputs.commit_message }}
-          prerelease: ${{ steps.tag.outputs.release_type }}
+          tag_name: 1
+          name: Image build - HyperOS
+          prerelease: stable
           body: |
-            This is a development build of Eupnea OS. Highly unstable!
-            
-            1. Combine images to a tar with: ``cat eupnea-depthcharge.split.?? > eupnea-depthcharge.tar.xz``
-            2. Extract tar, flash bin to usb
+            This is stable
+            Just extract the rar files and flash the image
             
             Triggered by ${{ github.sha }} at ${{ github.event.repository.updated_at }}
           #          files: |
