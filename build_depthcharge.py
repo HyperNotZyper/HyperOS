@@ -81,13 +81,11 @@ def flash_kernel(kernel_part: str) -> None:
 def bootstrap_rootfs(root_partuuid) -> None:
     bash("apt-get install -y linux-firmware network-manager software-properties-common systemd")
     
-    
+    cpfile("sourcesfolder/sources.list", "/mnt/hyperos/etc/apt/sources.list")
     # Create a temporary resolv.conf for internet inside the chroot
     mkdir("/mnt/hyperos/run/systemd/resolve", create_parents=True) # dir doesnt exist coz systemd didnt run
     cpfile("/etc/resolv.conf", "/mnt/hyperos/run/systemd/resolve/stub-resolv.conf") # copy hosts resolv.conf to chroot
-    chroot("sudo vim /etc/apt/sources.list")
-    chroot(":wq")
-
+    
     with open("/mnt/hyperos/etc/apt/sources.list", "a") as file:
         file.write(f"\ndeb http://archive.ubuntu.com/ubuntu kinetic 22.10-backports main "
                    "restricted universe multiverse\n")
