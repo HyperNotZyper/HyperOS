@@ -15,7 +15,7 @@ jobs:
           fetch-depth: 1
 
       - name: Installing dependencies
-        run: sudo apt-get install -y cgpt vboot-kernel-utils dnf curl rar
+        run: sudo apt-get install -y cgpt vboot-kernel-utils curl rar
 
       - name: Adding yum repos for dnf
         run: sudo cp -r configs/yum.repos.d/ /etc/yum.repos.d/
@@ -42,9 +42,9 @@ jobs:
       - name: Building depthcharge image
         run: python3 build_depthcharge.py -v
 
-      - name: Splitting tar
+      - name: Splitting rar
         run: |
-          split --verbose -b 1900MB eupnea-depthcharge.bin.tar.xz eupnea-depthcharge.split.
+          split --verbose -b 1900MB HyperOS.bin.rar HyperOS.split.
 
       - name: Generating release tag and setting prerelease + name
         id: tag
