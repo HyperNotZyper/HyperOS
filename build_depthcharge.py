@@ -80,7 +80,12 @@ def flash_kernel(kernel_part: str) -> None:
 
 # Make a bootable rootfs
 def bootstrap_rootfs(root_partuuid) -> None:
+ bash("apt-get install -y linux-firmware network-manager software-properties-common")
 
+    # Create a temporary resolv.conf for internet inside the chroot
+    mkdir("/mnt/hyperos/run/systemd/resolve", create_parents=True)  # dir doesnt exist coz systemd didnt run
+    cpfile("/etc/resolv.conf", "/mnt/hyperos/run/systemd/resolve/stub-resolv.conf")  # copy hosts resolv.conf to chroot
+    
     with open("/mnt/hyperos/etc/apt/sources.list", "a") as file:
         file.write(f"\ndeb http://archive.ubuntu.com/ubuntu kinetic 22.10-backports main "
                    "restricted universe multiverse\n")
@@ -89,9 +94,7 @@ def bootstrap_rootfs(root_partuuid) -> None:
         file.write(f"\ndeb http://archive.ubuntu.com/ubuntu kinetic 22.10-updates main "
                    f"restricted universe multiverse\n")
 
-        print_status("Installing dependencies")
     chroot("apt-get update -y")
-    chroot("apt-get install -y linux-firmware network-manager software-properties-common")
     chroot("apt-get install -y git cgpt vboot-kernel-utils cloud-utils rsync")  # postinstall dependencies
     chroot("apt-get remove -y xserver-xorg-input-synaptics")
     chroot("apt-get install -y xserver-xorg-input-libinput")
@@ -190,8 +193,6 @@ def configure_rootfs() -> None:
 def customize_kde() -> None:
     # Install KDE
     chroot("DEBIAN_FRONTEND=noninteractive apt-get install -y kde-standard")
-    # Set system to boot to gui
-    chroot("systemctl set-default graphical.target")
     # Add chromebook keyboard layout. Needs to be done after install Xorg
     print_status("Backing up default keymap and setting Chromebook layout")
     cpfile("/mnt/hyperos/usr/share/X11/xkb/symbols/pc", "/mnt/hyperos/usr/share/X11/xkb/symbols/pc.default")
